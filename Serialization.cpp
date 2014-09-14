@@ -1,9 +1,17 @@
 #include <cassert>
+#include <sstream>
 #include <fstream>
+#include <iostream>
 #include <type_traits>
 
-template<typename...>
-using void_t = void;
+template<typename... T>
+struct make_void
+{
+    typedef void type;
+};
+
+template<typename... T>
+using void_t = typename make_void<T...>::type;
 
 template<bool Condition, typename T>
 using enable_if_t = typename std::enable_if<Condition, T>::type;
@@ -26,13 +34,13 @@ struct has_serialize<T, S, void_t<decltype(std::declval<T&>().Serialize(std::dec
 template<typename T>
 enable_if_t<std::is_fundamental<T>::value, void> Serialize(std::ostream& stream, T value)
 {
-    stream.write(reinterpret_cast<char*>(&value), sizeof(T));
+    stream<<value<<std::endl;
 }
 
 template<typename T>
 enable_if_t<std::is_fundamental<T>::value, void> Serialize(std::istream& stream, T& value)
 {
-    stream.read(reinterpret_cast<char*>(&value), sizeof(T));
+    stream>>value;
 }
 
 template<typename S, typename T>
@@ -92,20 +100,19 @@ struct Player
 
 int main(int argc, const char * argv[])
 {
+    std::ostringstream ostream;
     {
         Player somePlayer(9001, {123.f, 321.f});
-        std::ofstream stream("test", std::ios::binary);
-        Serialize(stream, somePlayer);
+        Serialize(ostream, somePlayer);
     }
-
+    
+    std::istringstream istream(ostream.str());
     {
         Player somePlayer;
-        std::ifstream stream("test", std::ios::binary);
 
-        Serialize(stream, somePlayer);
-        assert(somePlayer.hp == 9001 && "Ops! My code sample is not working...");
-        assert(somePlayer.position.x == 123.f && "Ops! My code sample is not working...");
-        assert(somePlayer.position.y == 321.f && "Ops! My code sample is not working...");
+        Serialize(istream, somePlayer);
+        std::cout<<somePlayer.hp<<std::endl;
+        std::cout<<somePlayer.position.x<<std::endl;
+        std::cout<<somePlayer.position.y;
     }
 }
-
